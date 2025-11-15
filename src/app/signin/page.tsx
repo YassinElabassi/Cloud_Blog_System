@@ -19,17 +19,21 @@ export default function SigninPage() {
     setIsLoading(true);
     setError("");
 
+    //  la fonction login retourne  { success, message, user }
     const result = await login(email, password);
     
     if (result.success) {
-      router.push("/");
+      if (result.user?.role === "Admin") {
+        router.push("/dashboard");
+      } else {
+        router.push("/");
+      }
     } else {
       setError(result.message);
     }
     
     setIsLoading(false);
   };
-
   return (
     <>
       <section className="relative z-10 overflow-hidden pt-36 pb-16 md:pb-20 lg:pt-[180px] lg:pb-28">
