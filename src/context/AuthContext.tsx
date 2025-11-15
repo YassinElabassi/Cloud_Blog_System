@@ -15,7 +15,8 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  // type de retour pour inclure l'utilisateur lors du login
+  login: (email: string, password: string) => Promise<{ success: boolean; message: string; user?: User }>;
   register: (name: string, email: string, password: string, passwordConfirmation: string) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   updateProfile: (data: { name: string; email: string }) => Promise<{ success: boolean; message: string }>;
@@ -67,7 +68,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; message: string; user?: User }> => {
     try {
       // Get CSRF cookie first
       await axios.get('/sanctum/csrf-cookie');
@@ -83,10 +84,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         
         if (token && userData) {
           localStorage.setItem('auth_token', token);
-          // Stocker les headers axios pour les futures requêtes
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           setUser(userData);
-          return { success: true, message: 'Login successful' };
+          // Ajouter l'utilisateur à l'objet retourné
+          return { success: true, message: 'Login successful', user: userData };
         }
       }
       
@@ -100,9 +101,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const register = async (name: string, email: string, password: string, passwordConfirmation: string): Promise<{ success: boolean; message: string }> => {
     try {
-      // Get CSRF cookie first
       await axios.get('/sanctum/csrf-cookie');
-      
       const response = await axios.post('/api/register', {
         name,
         email,
@@ -116,7 +115,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         
         if (token && userData) {
           localStorage.setItem('auth_token', token);
-          // Stocker les headers axios pour les futures requêtes
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           setUser(userData);
           return { success: true, message: 'Registration successful' };
@@ -129,9 +127,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log('Error details:', error.response?.data);
       
       let message = 'Registration failed';
-      
       if (error.response?.data?.errors) {
-        // Gérer les erreurs de validation Laravel
         const errors = error.response.data.errors;
         if (errors.email) {
           message = errors.email[0];
@@ -143,22 +139,32 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       } else if (error.response?.data?.message) {
         message = error.response.data.message;
       }
-      
       return { success: false, message };
     }
   };
 
   const logout = async (): Promise<void> => {
-    try {
-      await axios.post('/api/logout');
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      localStorage.removeItem('auth_token');
-      delete axios.defaults.headers.common['Authorization'];
-      setUser(null);
+  try {
+    // On récupère le token qui prouve qui nous sommes
+    const token = localStorage.getItem('auth_token');
+
+    // On s'assure que le token existe avant d'envoyer la requête
+    if (token) {
+      //  On envoie la requête POST AVEC le header d'authentification
+      await axios.post('/api/logout', {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
     }
-  };
+  } catch (error) {
+    console.error('Logout error:', error);
+  } finally {
+    localStorage.removeItem('auth_token');
+    delete axios.defaults.headers.common['Authorization'];
+    setUser(null);
+  }
+};
 
   const updateProfile = async (data: { name: string; email: string }): Promise<{ success: boolean; message: string }> => {
     try {

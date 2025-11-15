@@ -11,7 +11,13 @@ import { useRouter } from "next/navigation";
 const Header = () => {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname(); //renommé pour plus de clarté
   
+  // Si le chemin de l'URL commence par "/dashboard", ne rien afficher.
+  if (pathname.startsWith('/dashboard')) {
+    return null;
+  }
+
   // Navbar toggle
   const [navbarOpen, setNavbarOpen] = useState(false);
   const navbarToggleHandler = () => {
@@ -75,22 +81,15 @@ const Header = () => {
                 } `}
                 onClick={() => setNavbarOpen(false)}
               >
-                <Image
-                  src="/images/logo/logo-2.svg"
-                  alt="logo"
-                  width={140}
-                  height={30}
-                  className="w-full dark:hidden"
-                />
-                <Image
-                  src="/images/logo/logo.svg"
-                  alt="logo"
-                  width={140}
-                  height={30}
-                  className="hidden w-full dark:block"
-                />
-              </Link>
-            </div>
+             {/* Logo avec Dégradé */}
+                <div className="flex items-center">
+                  <span className="text-3xl" role="img" aria-label="cloud emoji">☁️</span>
+                  <span className="ml-2 text-2xl font-bold text-primary">
+                    CloudBlog
+                  </span>
+                </div>
+                </Link>
+              </div>
             <div className="flex w-full items-center justify-between px-4">
               <div>
                 <button
@@ -257,9 +256,6 @@ const Header = () => {
                     </Link>
                   </>
                 )}
-                <div>
-                  <ThemeToggler />
-                </div>
               </div>
             </div>
           </div>
