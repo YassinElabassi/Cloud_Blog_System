@@ -39,6 +39,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Déconnexion
     Route::post('logout', [AuthController::class, 'logout']);
 
+    // Update authenticated user's profile
+    Route::put('/user/profile', [UserController::class, 'updateProfile']);
+
     // --- USER MANAGEMENT (UserController) ---
     Route::apiResource('users', UserController::class);
     Route::put('users/{user}/status', [UserController::class, 'toggleStatus']);
@@ -48,6 +51,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/admin/articles', 'indexAdmin'); 
         Route::get('/articles/stats', [ArticleController::class, 'getAdminStats']);
+        
+        // User's own articles (both Published and Archived)
+        Route::get('/user/articles', 'myArticles');
         
         // CRUD: Create (UC1/UC7)
         Route::post('/articles', 'store'); 

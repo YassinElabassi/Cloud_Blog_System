@@ -1,7 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import axios from "axios";
 
 // Types
 export interface User {
@@ -16,10 +22,21 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   // type de retour pour inclure l'utilisateur lors du login
-  login: (email: string, password: string) => Promise<{ success: boolean; message: string; user?: User }>;
-  register: (name: string, email: string, password: string, passwordConfirmation: string) => Promise<{ success: boolean; message: string }>;
+  login: (
+    email: string,
+    password: string,
+  ) => Promise<{ success: boolean; message: string; user?: User }>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    passwordConfirmation: string,
+  ) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
-  updateProfile: (data: { name: string; email: string }) => Promise<{ success: boolean; message: string }>;
+  updateProfile: (data: {
+    name: string;
+    email: string;
+  }) => Promise<{ success: boolean; message: string }>;
   loading: boolean;
 }
 
@@ -27,12 +44,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Configuration axios
 axios.defaults.withCredentials = true;
-axios.defaults.baseURL = 'http://localhost:8000';
+axios.defaults.baseURL = "http://127.0.0.1:8000";
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -51,9 +68,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem("auth_token");
       if (token) {
-        const response = await axios.get('/api/user', {
+        const response = await axios.get("/api/user", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -61,19 +78,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUser(response.data);
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
-      localStorage.removeItem('auth_token');
+      console.error("Auth check failed:", error);
+      localStorage.removeItem("auth_token");
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; message: string; user?: User }> => {
+  const login = async (
+    email: string,
+    password: string,
+  ): Promise<{ success: boolean; message: string; user?: User }> => {
     try {
-      // Get CSRF cookie first
-      await axios.get('/sanctum/csrf-cookie');
-      
-      const response = await axios.post('/api/login', {
+      const response = await axios.post("/api/login", {
         email,
         password,
       });
@@ -81,28 +98,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (response.status === 200) {
         const userData = response.data.user;
         const token = response.data.token;
-        
+
         if (token && userData) {
-          localStorage.setItem('auth_token', token);
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          localStorage.setItem("auth_token", token);
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
           setUser(userData);
           // Ajouter l'utilisateur à l'objet retourné
-          return { success: true, message: 'Login successful', user: userData };
+          return { success: true, message: "Login successful", user: userData };
         }
       }
-      
-      return { success: false, message: 'Login failed' };
+
+      return { success: false, message: "Login failed" };
     } catch (error: any) {
-      console.error('Login error:', error);
-      const message = error.response?.data?.message || error.response?.data?.error || 'Login failed';
+      console.error("Login error:", error);
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Login failed";
       return { success: false, message };
     }
   };
 
-  const register = async (name: string, email: string, password: string, passwordConfirmation: string): Promise<{ success: boolean; message: string }> => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    passwordConfirmation: string,
+  ): Promise<{ success: boolean; message: string }> => {
     try {
-      await axios.get('/sanctum/csrf-cookie');
-      const response = await axios.post('/api/register', {
+      const response = await axios.post("/api/register", {
         name,
         email,
         password,
@@ -112,21 +136,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (response.status === 201) {
         const userData = response.data.user;
         const token = response.data.token;
-        
+
         if (token && userData) {
-          localStorage.setItem('auth_token', token);
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          localStorage.setItem("auth_token", token);
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
           setUser(userData);
-          return { success: true, message: 'Registration successful' };
+          return { success: true, message: "Registration successful" };
         }
       }
-      
-      return { success: false, message: 'Registration failed' };
+
+      return { success: false, message: "Registration failed" };
     } catch (error: any) {
-      console.error('Registration error:', error);
-      console.log('Error details:', error.response?.data);
-      
-      let message = 'Registration failed';
+      console.error("Registration error:", error);
+      console.log("Error details:", error.response?.data);
+
+      let message = "Registration failed";
       if (error.response?.data?.errors) {
         const errors = error.response.data.errors;
         if (errors.email) {
@@ -144,40 +168,65 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const logout = async (): Promise<void> => {
-  try {
-    // On récupère le token qui prouve qui nous sommes
-    const token = localStorage.getItem('auth_token');
-
-    // On s'assure que le token existe avant d'envoyer la requête
-    if (token) {
-      //  On envoie la requête POST AVEC le header d'authentification
-      await axios.post('/api/logout', {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-    }
-  } catch (error) {
-    console.error('Logout error:', error);
-  } finally {
-    localStorage.removeItem('auth_token');
-    delete axios.defaults.headers.common['Authorization'];
-    setUser(null);
-  }
-};
-
-  const updateProfile = async (data: { name: string; email: string }): Promise<{ success: boolean; message: string }> => {
     try {
-      const response = await axios.put('/api/user/profile', data);
-      
+      // On récupère le token qui prouve qui nous sommes
+      const token = localStorage.getItem("auth_token");
+      const userRole = user?.role;
+
+      // On s'assure que le token existe avant d'envoyer la requête
+      if (token) {
+        //  On envoie la requête POST AVEC le header d'authentification
+        await axios.post(
+          "/api/logout",
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+      }
+
+      localStorage.removeItem("auth_token");
+      delete axios.defaults.headers.common["Authorization"];
+      setUser(null);
+
+      // Redirect based on user role
+      if (userRole === "Admin") {
+        window.location.href = "/signin";
+      } else {
+        window.location.href = "/";
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      localStorage.removeItem("auth_token");
+      delete axios.defaults.headers.common["Authorization"];
+      setUser(null);
+      window.location.href = "/signin";
+    }
+  };
+
+  const updateProfile = async (data: {
+    name: string;
+    email: string;
+  }): Promise<{ success: boolean; message: string }> => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      const response = await axios.put("/api/user/profile", data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (response.status === 200) {
         setUser(response.data.user);
-        return { success: true, message: 'Profile updated successfully' };
+        return { success: true, message: "Profile updated successfully" };
       }
-      
-      return { success: false, message: 'Profile update failed' };
+
+      return { success: false, message: "Profile update failed" };
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Profile update failed';
+      console.error("Profile update error:", error);
+      const message = error.response?.data?.message || "Profile update failed";
       return { success: false, message };
     }
   };
@@ -191,9 +240,5 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     loading,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

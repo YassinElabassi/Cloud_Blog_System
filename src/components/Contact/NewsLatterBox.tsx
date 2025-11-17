@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 const NewsLatterBox = () => {
   const { theme } = useTheme();
   // 1. Initialiser l'état de montage (false pour le SSR)
-  const [mounted, setMounted] = useState(false); 
+  const [mounted, setMounted] = useState(false);
 
   // 2. Définir `mounted` à true uniquement après le montage côté client
   useEffect(() => {
@@ -15,18 +15,17 @@ const NewsLatterBox = () => {
 
   // 3. Définir la couleur de repli/dynamique selon le thème et l'état de montage
   const getStopColor = () => {
-      // Si non monté ou thème non défini, utiliser une couleur par défaut
-      if (!mounted || !theme) {
-          // L'inspection de l'erreur précédente montre que le serveur rendait `#fff` ou `#4A6CF7`
-          // Si on suppose que le défaut SSR est le light theme:
-          return "#4A6CF7"; 
-      }
-      // Une fois monté, utiliser la valeur réelle du thème
-      return theme === "light" ? "#4A6CF7" : "#fff";
+    // Si non monté ou thème non défini, utiliser une couleur par défaut
+    if (!mounted || !theme) {
+      // L'inspection de l'erreur précédente montre que le serveur rendait `#fff` ou `#4A6CF7`
+      // Si on suppose que le défaut SSR est le light theme:
+      return "#4A6CF7";
+    }
+    // Une fois monté, utiliser la valeur réelle du thème
+    return theme === "light" ? "#4A6CF7" : "#fff";
   };
-  
-  const stopColorValue = getStopColor();
 
+  const stopColorValue = getStopColor();
 
   return (
     <div className="shadow-three dark:bg-gray-dark relative z-10 rounded-xs bg-white p-8 sm:p-11 lg:p-8 xl:p-11">
@@ -34,8 +33,8 @@ const NewsLatterBox = () => {
         Subscribe to receive future updates
       </h3>
       <p className="border-body-color/25 text-body-color mb-11 border-b pb-11 text-base leading-relaxed dark:border-white/25">
-        Lorem ipsum dolor sited Sed ullam corper consectur adipiscing Mae ornare
-        massa quis lectus.
+        Stay up to date with the latest articles, news, and insights from our
+        community. Subscribe to our newsletter and never miss an update.
       </p>
       <div>
         <input
@@ -87,11 +86,7 @@ const NewsLatterBox = () => {
                   stopColor={stopColorValue} //  Applique la valeur contrôlée par `mounted`
                   stopOpacity="0.62"
                 />
-                <stop
-                  offset="1"
-                  stopColor={stopColorValue} 
-                  stopOpacity="0"
-                />
+                <stop offset="1" stopColor={stopColorValue} stopOpacity="0" />
               </linearGradient>
             </defs>
           </svg>
@@ -119,15 +114,8 @@ const NewsLatterBox = () => {
                 y2="10.2511"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop
-                  stopColor={stopColorValue} 
-                  stopOpacity="0.62"
-                />
-                <stop
-                  offset="1"
-                  stopColor={stopColorValue} 
-                  stopOpacity="0"
-                />
+                <stop stopColor={stopColorValue} stopOpacity="0.62" />
+                <stop offset="1" stopColor={stopColorValue} stopOpacity="0" />
               </linearGradient>
             </defs>
           </svg>
@@ -155,15 +143,8 @@ const NewsLatterBox = () => {
                 y2="26.7564"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop
-                  stopColor={stopColorValue} 
-                  stopOpacity="0.62"
-                />
-                <stop
-                  offset="1"
-                  stopColor={stopColorValue}
-                  stopOpacity="0"
-                />
+                <stop stopColor={stopColorValue} stopOpacity="0.62" />
+                <stop offset="1" stopColor={stopColorValue} stopOpacity="0" />
               </linearGradient>
             </defs>
           </svg>
@@ -208,15 +189,8 @@ const NewsLatterBox = () => {
                 y2="237.617"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop
-                  offset="0.328125"
-                  stopColor={stopColorValue} 
-                />
-                <stop
-                  offset="1"
-                  stopColor={stopColorValue} 
-                  stopOpacity="0"
-                />
+                <stop offset="0.328125" stopColor={stopColorValue} />
+                <stop offset="1" stopColor={stopColorValue} stopOpacity="0" />
               </linearGradient>
               <linearGradient
                 id="paint1_linear_1028_603"
@@ -226,15 +200,8 @@ const NewsLatterBox = () => {
                 y2="212.617"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop
-                  offset="0.328125"
-                  stopColor={stopColorValue} 
-                />
-                <stop
-                  offset="1"
-                  stopColor={stopColorValue} 
-                  stopOpacity="0"
-                />
+                <stop offset="0.328125" stopColor={stopColorValue} />
+                <stop offset="1" stopColor={stopColorValue} stopOpacity="0" />
               </linearGradient>
               <linearGradient
                 id="paint2_linear_1028_603"
@@ -244,15 +211,8 @@ const NewsLatterBox = () => {
                 y2="221.617"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop
-                  offset="0.328125"
-                  stopColor={stopColorValue} 
-                />
-                <stop
-                  offset="1"
-                  stopColor={stopColorValue} 
-                  stopOpacity="0"
-                />
+                <stop offset="0.328125" stopColor={stopColorValue} />
+                <stop offset="1" stopColor={stopColorValue} stopOpacity="0" />
               </linearGradient>
               <linearGradient
                 id="paint3_linear_1028_603"
@@ -262,15 +222,8 @@ const NewsLatterBox = () => {
                 y2="188.617"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop
-                  offset="0.328125"
-                  stopColor={stopColorValue} 
-                />
-                <stop
-                  offset="1"
-                  stopColor={stopColorValue} 
-                  stopOpacity="0"
-                />
+                <stop offset="0.328125" stopColor={stopColorValue} />
+                <stop offset="1" stopColor={stopColorValue} stopOpacity="0" />
               </linearGradient>
             </defs>
           </svg>

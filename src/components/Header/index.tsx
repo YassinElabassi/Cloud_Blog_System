@@ -12,9 +12,9 @@ const Header = () => {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname(); //renommé pour plus de clarté
-  
+
   // Si le chemin de l'URL commence par "/dashboard", ne rien afficher.
-  if (pathname.startsWith('/dashboard')) {
+  if (pathname.startsWith("/dashboard")) {
     return null;
   }
 
@@ -27,7 +27,7 @@ const Header = () => {
   // Sticky Navbar
   const [sticky, setSticky] = useState(false);
   const handleStickyNavbar = () => {
-    if (typeof window !== 'undefined' && window.scrollY >= 80) {
+    if (typeof window !== "undefined" && window.scrollY >= 80) {
       setSticky(true);
     } else {
       setSticky(false);
@@ -35,7 +35,7 @@ const Header = () => {
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       window.addEventListener("scroll", handleStickyNavbar);
       return () => {
         window.removeEventListener("scroll", handleStickyNavbar);
@@ -55,7 +55,6 @@ const Header = () => {
 
   const handleLogout = async (): Promise<void> => {
     await logout();
-    router.push("/");
     setNavbarOpen(false);
   };
 
@@ -81,15 +80,21 @@ const Header = () => {
                 } `}
                 onClick={() => setNavbarOpen(false)}
               >
-             {/* Logo avec Dégradé */}
+                {/* Logo avec Dégradé */}
                 <div className="flex items-center">
-                  <span className="text-3xl" role="img" aria-label="cloud emoji">☁️</span>
-                  <span className="ml-2 text-2xl font-bold text-primary">
+                  <span
+                    className="text-3xl"
+                    role="img"
+                    aria-label="cloud emoji"
+                  >
+                    ☁️
+                  </span>
+                  <span className="text-primary ml-2 text-2xl font-bold">
                     CloudBlog
                   </span>
                 </div>
-                </Link>
-              </div>
+              </Link>
+            </div>
             <div className="flex w-full items-center justify-between px-4">
               <div>
                 <button
@@ -175,23 +180,10 @@ const Header = () => {
                         )}
                       </li>
                     ))}
-                    
-                    {/* Menu utilisateur connecté */}
-                    {user && (
+
+                    {/* Menu utilisateur connecté (non-admin uniquement) */}
+                    {user && user.role !== "Admin" && (
                       <>
-                        <li className="group relative">
-                          <Link
-                            href="/profile"
-                            className={`flex py-2 text-base lg:mr-0 lg:inline-flex lg:px-0 lg:py-6 ${
-                              usePathName === "/profile"
-                                ? "text-primary dark:text-white"
-                                : "text-dark hover:text-primary dark:text-white/70 dark:hover:text-white"
-                            }`}
-                            onClick={() => setNavbarOpen(false)}
-                          >
-                            Profile
-                          </Link>
-                        </li>
                         <li className="group relative">
                           <Link
                             href="/my-articles"
@@ -205,28 +197,26 @@ const Header = () => {
                             My Articles
                           </Link>
                         </li>
-                        {user.role === 'admin' && (
-                          <li className="group relative">
-                            <Link
-                              href="/admin"
-                              className={`flex py-2 text-base lg:mr-0 lg:inline-flex lg:px-0 lg:py-6 ${
-                                usePathName === "/admin"
-                                  ? "text-primary dark:text-white"
-                                  : "text-dark hover:text-primary dark:text-white/70 dark:hover:text-white"
-                              }`}
-                              onClick={() => setNavbarOpen(false)}
-                            >
-                              Admin
-                            </Link>
-                          </li>
-                        )}
+                        <li className="group relative">
+                          <Link
+                            href="/profile"
+                            className={`flex py-2 text-base lg:mr-0 lg:inline-flex lg:px-0 lg:py-6 ${
+                              usePathName === "/profile"
+                                ? "text-primary dark:text-white"
+                                : "text-dark hover:text-primary dark:text-white/70 dark:hover:text-white"
+                            }`}
+                            onClick={() => setNavbarOpen(false)}
+                          >
+                            Profile
+                          </Link>
+                        </li>
                       </>
                     )}
                   </ul>
                 </nav>
               </div>
               <div className="flex items-center justify-end pr-16 lg:pr-0">
-                {user ? (
+                {user && user.role !== "Admin" ? (
                   <>
                     <span className="text-dark hidden px-4 py-3 text-sm font-medium md:block dark:text-white">
                       Hello, {user.name}
@@ -238,7 +228,7 @@ const Header = () => {
                       Logout
                     </button>
                   </>
-                ) : (
+                ) : !user ? (
                   <>
                     <Link
                       href="/signin"
@@ -255,7 +245,7 @@ const Header = () => {
                       Sign Up
                     </Link>
                   </>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
