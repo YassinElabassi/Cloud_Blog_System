@@ -39,20 +39,59 @@ const BlogDetailsPage = () => {
 
   const fetchArticle = async () => {
     try {
+      // Get auth token from localStorage (using correct key)
+      const token = localStorage.getItem("auth_token");
+
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+
+      // Add authorization header if token exists
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+        console.log("Fetching article with auth token");
+      } else {
+        console.log("No auth token found, fetching as guest");
+      }
+
       const response = await fetch(
         `http://127.0.0.1:8000/api/articles/${articleId}`,
+        { headers },
       );
       if (response.ok) {
         const data = await response.json();
-        // Parse tags if they come as a JSON string
-        if (data.tags && typeof data.tags === "string") {
-          try {
-            data.tags = JSON.parse(data.tags);
-          } catch {
-            data.tags = [];
+
+        // Parse tags - handle both JSON strings, arrays, and comma-separated strings
+        let tags = [];
+        if (data.tags) {
+          if (Array.isArray(data.tags)) {
+            tags = data.tags;
+          } else if (typeof data.tags === "string") {
+            if (data.tags.trim()) {
+              try {
+                // Try parsing as JSON first
+                tags = JSON.parse(data.tags);
+              } catch {
+                // If JSON parse fails, treat as comma-separated string
+                tags = data.tags
+                  .split(",")
+                  .map((tag) => tag.trim())
+                  .filter((tag) => tag);
+              }
+            }
           }
         }
+        data.tags = tags;
+
         setArticle(data);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Article fetch failed:", {
+          status: response.status,
+          error: errorData,
+          articleId,
+          hasToken: !!token,
+        });
       }
     } catch (error) {
       console.error("Error fetching article:", error);
