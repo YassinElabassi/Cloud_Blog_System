@@ -171,4 +171,37 @@ class UserController extends Controller
         
         return response()->json(['message' => 'Login recorded']);
     }
+
+    /**
+     * Update the authenticated user's profile.
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Authentication required.'], 401);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'designation' => 'nullable|string|max:255',
+            'image' => 'nullable|string|max:255',
+        ]);
+
+        $user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+            'designation' => $request->designation,
+            'image' => $request->image,
+        ]);
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => $user
+        ]);
+    }
 }

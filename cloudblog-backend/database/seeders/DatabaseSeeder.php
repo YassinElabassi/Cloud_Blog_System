@@ -14,11 +14,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
-        // \App\Models\User::factory(10)->create();
+        // Run seeders in the correct order
+        // 1. Users first (required for articles and comments)
+        $this->call(UserSeeder::class);
+        
+        // 2. Articles second (required for comments)
+        $this->call(ArticleSeeder::class);
+        
+        // 3. Comments last (depends on users and articles)
+        $this->call(CommentSeeder::class);
 
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+        $this->command->info('All seeders completed successfully!');
     }
 }

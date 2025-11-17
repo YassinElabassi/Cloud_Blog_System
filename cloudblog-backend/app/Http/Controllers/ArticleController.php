@@ -39,9 +39,8 @@ class ArticleController extends Controller
                     'title' => $article->title,
                     'paragraph' => $article->paragraph,
                     'image' => $article->image,
-                    // CORRECTION 1: Gérer les tags. Si le modèle les caste en array, on les retourne. Sinon, on explode.
-                    // J'assume qu'ils sont castés en array par le modèle.
-                    'tags' => is_array($article->tags) ? $article->tags : ($article->tags ? explode(',', $article->tags) : []), 
+                    // Tags are automatically casted to array by the Article model
+                    'tags' => $article->tags ?? [], 
                     
                     // CORRECTION 2: Gérer les dates NULL
                     'publishDate' => $article->publish_date ? $article->publish_date->format('Y-m-d') : null, 
@@ -90,6 +89,53 @@ class ArticleController extends Controller
     }
 
     /**
+     * Get all articles for the authenticated user (both Published and Archived).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function myArticles(Request $request)
+    {
+        // User must be logged in
+        if (!$request->user()) {
+            return response()->json(['error' => 'Authentication required.'], 401);
+        }
+
+        try {
+            $articles = Article::where('user_id', $request->user()->id)
+                               ->orderBy('publish_date', 'desc')
+                               ->with('user')
+                               ->get();
+
+            // Format the response similar to indexAdmin
+            $formattedArticles = $articles->map(function ($article) {
+                $user = $article->user;
+
+                return [
+                    'id' => $article->id,
+                    'title' => $article->title,
+                    'paragraph' => $article->paragraph,
+                    'image' => $article->image,
+                    // Tags are automatically casted to array by the Article model
+                    'tags' => $article->tags ?? [],
+                    'publishDate' => $article->publish_date ? $article->publish_date->format('Y-m-d') : null,
+                    'status' => $article->status,
+                    'author' => [
+                        'name' => $user ? $user->name : 'Unknown Author',
+                        'image' => $user ? ($user->profile_photo_url ?? '/images/blog/author-default.png') : '/images/blog/author-default.png',
+                        'designation' => $user ? ($user->designation ?? 'Writer') : 'Writer',
+                    ],
+                ];
+            });
+
+            return response()->json($formattedArticles);
+        } catch (\Exception $e) {
+            Log::error('Error fetching user articles: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch articles.'], 500);
+        }
+    }
+
+    /**
      * Store a newly created article (UC1) with image upload to S3 (UC7).
      *
      * @param  \Illuminate\Http\Request  $request
@@ -113,19 +159,26 @@ class ArticleController extends Controller
 
             $imageUrl = null;
 
-            // 2. Image Upload to AWS S3 (UC7)
+            // 2. Image Upload to storage (local or S3)
             if ($request->hasFile('image')) {
                 $imageFile = $request->file('image');
                 $path = 'images/articles';
                 
-                // putFile stores the file with a unique name and returns the S3 path
-                $s3Path = Storage::disk('s3')->putFile($path, $imageFile, 'public');
+                // Use configured disk (local in development, s3 in production)
+                $disk = config('filesystems.default');
+                $storagePath = Storage::disk($disk)->putFile($path, $imageFile, 'public');
                 
-                // Get the public URL to store in the database
-                $imageUrl = Storage::disk('s3')->url($s3Path);
+                // Get the public URL
+                $imageUrl = Storage::disk($disk)->url($storagePath);
 
                 // CloudWatch Log (UC11): Log storage action
-                Log::info('Image uploaded to S3', ['s3_path' => $s3Path, 'user_id' => $request->user()->id]);
+                Log::info('Image uploaded', ['path' => $storagePath, 'disk' => $disk, 'user_id' => $request->user()->id]);
+            }
+
+            // Convert comma-separated tags string to array
+            $tagsArray = null;
+            if (!empty($validated['tags'])) {
+                $tagsArray = array_map('trim', explode(',', $validated['tags']));
             }
 
             // 3. Article Creation and Database Save (RDS)
@@ -134,7 +187,7 @@ class ArticleController extends Controller
                 'title' => $validated['title'],
                 'paragraph' => $validated['paragraph'],
                 'image' => $imageUrl,
-                'tags' => $validated['tags'] ?? null,
+                'tags' => $tagsArray,
                 'status' => 'Archived', // Default status is Archived
                 'publish_date' => now(), // Creation date for example
             ]);
@@ -161,10 +214,10 @@ class ArticleController extends Controller
      * @param Article $article
      * @return \Illuminate\Http\JsonResponse
      */
-    public function show(Article $article)
+    public function show(Request $request, Article $article)
     {
-        // If the article is not published, deny access, unless it's the author or an Admin.
-        $user = auth()->user();
+        // Try to get authenticated user (works even for public routes with optional auth)
+        $user = auth('sanctum')->user();
         $isAuthorized = $user && ($article->user_id === $user->id || $user->role === 'Admin');
 
         if ($article->status !== 'Published' && !$isAuthorized) {
@@ -208,21 +261,30 @@ class ArticleController extends Controller
 
             $data = $request->except('image');
 
-            // 2. S3 Upload and Deletion Management
+            // Convert comma-separated tags string to array
+            if (isset($data['tags']) && !empty($data['tags'])) {
+                $data['tags'] = array_map('trim', explode(',', $data['tags']));
+            } elseif (isset($data['tags'])) {
+                $data['tags'] = null;
+            }
+
+            // 2. Upload and Deletion Management
             if ($request->hasFile('image')) {
+                $disk = config('filesystems.default');
+                
                 // Delete old image if it exists
                 if ($article->image) {
-                    $oldPath = str_replace(Storage::disk('s3')->url('/'), '', $article->image);
-                    Storage::disk('s3')->delete($oldPath);
+                    $oldPath = str_replace(Storage::disk($disk)->url('/'), '', $article->image);
+                    Storage::disk($disk)->delete($oldPath);
                 }
 
-                // New S3 Upload
+                // New Upload
                 $imageFile = $request->file('image');
                 $path = 'images/articles';
-                $s3Path = Storage::disk('s3')->putFile($path, $imageFile, 'public');
-                $data['image'] = Storage::disk('s3')->url($s3Path);
+                $storagePath = Storage::disk($disk)->putFile($path, $imageFile, 'public');
+                $data['image'] = Storage::disk($disk)->url($storagePath);
                 
-                Log::info('Image updated on S3', ['s3_path' => $s3Path, 'user_id' => $request->user()->id]);
+                Log::info('Image updated', ['path' => $storagePath, 'disk' => $disk, 'user_id' => $request->user()->id]);
             }
             
             // 3. Update the data

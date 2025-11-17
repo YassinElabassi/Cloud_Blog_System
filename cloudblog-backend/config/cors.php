@@ -3,7 +3,7 @@
 return [
     'paths' => ['api/*', 'sanctum/*', 'login', 'logout', 'register'],
     'allowed_methods' => ['*'],
-    'allowed_origins' => ['http://localhost:3000'],
+    'allowed_origins' => ['http://localhost:3000', 'http://192.168.0.129:3000'],
     'allowed_origins_patterns' => [],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
