@@ -40,7 +40,8 @@ const CommentSection = ({ articleId }: CommentSectionProps) => {
       );
       if (response.ok) {
         const data = await response.json();
-        setComments(data.filter((c: Comment) => c.status === "Approved"));
+        setComments(data);
+
       }
     } catch (error) {
       console.error("Error fetching comments:", error);
