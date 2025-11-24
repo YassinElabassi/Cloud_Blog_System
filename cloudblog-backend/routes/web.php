@@ -2,17 +2,32 @@
 
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
-*/
+Route::get('/', function () {
+    return response()->json([
+        'message' => 'CloudBlog API',
+        'version' => '1.0.0',
+        'status' => 'running',
+        'endpoints' => [
+            'articles' => '/api/articles',
+            'login' => '/api/login',
+            'register' => '/api/register',
+            'user' => '/api/user',
+        ],
+        'timestamp' => now()
+    ]);
+});
 
+Route::get('/test', function () {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Laravel fonctionne parfaitement !',
+        'php_version' => PHP_VERSION,
+        'laravel_version' => app()->version(),
+        'environment' => config('app.env'),
+        'database' => config('database.default'),
+        'timestamp' => now()
+    ]);
+});
 
 Route::get('/login', function () {
     return view('login');
