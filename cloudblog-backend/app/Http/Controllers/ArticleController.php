@@ -188,7 +188,7 @@ class ArticleController extends Controller
                 'paragraph' => $validated['paragraph'],
                 'image' => $imageUrl,
                 'tags' => $tagsArray,
-                'status' => 'Archived', // Default status is Archived
+                'status' => 'Published', // Default status is Archived
                 'publish_date' => now(), // Creation date for example
             ]);
 
