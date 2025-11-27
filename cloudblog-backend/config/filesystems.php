@@ -44,17 +44,15 @@ return [
             'throw' => false,
         ],
 
-        's3' => [
-            'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
-            'url' => env('AWS_URL'),
-            'endpoint' => env('AWS_ENDPOINT'),
-            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
-            'throw' => false,
-        ],
+     'azure' => [
+        // ATTENTION : Le nom du driver a été mis à jour
+        'driver' => 'azure-blob-storage', 
+        'account_name' => env('AZURE_STORAGE_ACCOUNT_NAME'),
+        'account_key' => env('AZURE_STORAGE_ACCOUNT_KEY'),
+        'container' => env('AZURE_STORAGE_CONTAINER'),
+        'url' => env('AZURE_STORAGE_URL'),
+        'endpoint_suffix' => 'core.windows.net', // Optionnel mais conseillé
+    ],
 
     ],
 

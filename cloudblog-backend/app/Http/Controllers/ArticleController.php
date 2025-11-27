@@ -20,33 +20,28 @@ class ArticleController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
+/**
+     * Display a listing of ALL resources for Admin.
+     */
     public function indexAdmin(Request $request)
     {
-        // Utiliser un bloc try-catch ici pour renvoyer une trace détaillée en cas de 500
         try {
-            $articles = Article::orderBy('publish_date', 'desc')
-                               ->with('user') // Le point le plus probable d'un crash si user_id est orphelin
-                               ->get(); 
+            $articles = Article::orderBy('publish_date', 'desc')->with('user')->get(); 
 
-            // Nous devons mapper la relation 'user' à l'objet 'author' attendu par le Front-end
             $formattedArticles = $articles->map(function ($article) {
-                
-                // Vérification de la relation 'user' pour éviter 'Attempt to read property...' sur un article orphelin.
                 $user = $article->user;
-
                 return [
                     'id' => $article->id,
                     'title' => $article->title,
                     'paragraph' => $article->paragraph,
-                    'image' => $article->image,
-                    // Tags are automatically casted to array by the Article model
-                    'tags' => $article->tags ?? [], 
                     
-                    // CORRECTION 2: Gérer les dates NULL
+                    // L'accessor dans le Model Article convertira automatiquement ce nom de fichier en URL complète Azure
+                    'image' => $article->image, 
+                    
+                    'tags' => $article->tags ?? [], 
                     'publishDate' => $article->publish_date ? $article->publish_date->format('Y-m-d') : null, 
                     'status' => $article->status,
                     'author' => [
-                        // CORRECTION 3: Vérification de l'objet $user (relation)
                         'name' => $user ? $user->name : 'Unknown Author', 
                         'image' => $user ? ($user->profile_photo_url ?? '/images/blog/author-default.png') : '/images/blog/author-default.png', 
                         'designation' => $user ? ($user->designation ?? 'Writer') : 'Writer', 
@@ -55,18 +50,9 @@ class ArticleController extends Controller
             });
 
             return response()->json($formattedArticles);
-            
         } catch (\Exception $e) {
-            // Loguer l'erreur spécifique pour le débogage CloudWatch (UC11)
-            Log::error('ArticleController indexAdmin crashed:', [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString() // Fournir la trace complète
-            ]);
-            
-            // Renvoyer l'erreur 500 générique au front-end
-            return response()->json(['error' => 'Server error while fetching admin articles. Check backend logs for details.'], 500);
+            Log::error('ArticleController indexAdmin crashed:', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Server error while fetching admin articles.'], 500);
         }
     }
 
@@ -79,14 +65,14 @@ class ArticleController extends Controller
      */
     public function index()
     {
-        // Retrieve only published articles, sorted by recent publish date
         $articles = Article::where('status', 'Published')
                            ->orderBy('publish_date', 'desc')
-                           ->with('user') // Eager load the author (User) for each article
-                           ->paginate(10); // Pagination for performance
+                           ->with('user')
+                           ->paginate(10);
 
         return response()->json($articles);
     }
+
 
     /**
      * Get all articles for the authenticated user (both Published and Archived).
@@ -96,7 +82,6 @@ class ArticleController extends Controller
      */
     public function myArticles(Request $request)
     {
-        // User must be logged in
         if (!$request->user()) {
             return response()->json(['error' => 'Authentication required.'], 401);
         }
@@ -128,12 +113,13 @@ class ArticleController extends Controller
                 ];
             });
 
-            return response()->json($formattedArticles);
+           return response()->json($articles); 
         } catch (\Exception $e) {
             Log::error('Error fetching user articles: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch articles.'], 500);
         }
     }
+
 
     /**
      * Store a newly created article (UC1) with image upload to S3 (UC7).
@@ -143,69 +129,66 @@ class ArticleController extends Controller
      */
     public function store(Request $request)
     {
-        // User must be logged in to create an article
         if (!$request->user()) {
             return response()->json(['error' => 'Authentication required.'], 401);
         }
 
         try {
-            // 1. Data Validation
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'paragraph' => 'required|string',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048', // Max 2MB
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
                 'tags' => 'nullable|string', 
             ]);
 
-            $imageUrl = null;
+            $imageFilename = null;
 
-            // 2. Image Upload to storage (local or S3)
+            // --- MODIFICATION AZURE ---
             if ($request->hasFile('image')) {
                 $imageFile = $request->file('image');
-                $path = 'images/articles';
                 
-                // Use configured disk (local in development, s3 in production)
-                $disk = config('filesystems.default');
-                $storagePath = Storage::disk($disk)->putFile($path, $imageFile, 'public');
+                // Générer un nom unique : timestamp + nom original nettoyé
+                $filename = time() . '_' . str_replace(' ', '_', $imageFile->getClientOriginalName());
                 
-                // Get the public URL
-                $imageUrl = Storage::disk($disk)->url($storagePath);
+                // Upload vers Azure (à la racine du conteneur défini dans .env)
+                // Le paramètre 'public' assure la visibilité
+                Storage::disk('azure')->putFileAs('', $imageFile, $filename, 'public');
+                
+                // On stocke SEULEMENT le nom du fichier (ex: 12345_image.jpg)
+                // L'URL complète sera générée par le Modèle Article via l'Accessor
+                $imageFilename = $filename;
 
-                // CloudWatch Log (UC11): Log storage action
-                Log::info('Image uploaded', ['path' => $storagePath, 'disk' => $disk, 'user_id' => $request->user()->id]);
+                Log::info('Image uploaded to Azure', ['filename' => $filename, 'user_id' => $request->user()->id]);
             }
+            // --------------------------
 
-            // Convert comma-separated tags string to array
             $tagsArray = null;
             if (!empty($validated['tags'])) {
                 $tagsArray = array_map('trim', explode(',', $validated['tags']));
             }
 
-            // 3. Article Creation and Database Save (RDS)
             $article = Article::create([
-                'user_id' => $request->user()->id, // ID of the logged-in author
+                'user_id' => $request->user()->id,
                 'title' => $validated['title'],
                 'paragraph' => $validated['paragraph'],
-                'image' => $imageUrl,
+                'image' => $imageFilename, // Stocke le nom du fichier Azure
                 'tags' => $tagsArray,
-                'status' => 'Published', // Default status is Archived
-                'publish_date' => now(), // Creation date for example
+                'status' => 'Published',
+                'publish_date' => now(),
             ]);
 
             return response()->json([
-                'message' => 'Article created successfully and image stored on S3.',
+                'message' => 'Article created successfully and image stored on Azure.',
                 'article' => $article,
             ], 201);
 
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
-            // CloudWatch Log (UC11): Log errors
             Log::error('Article creation failed', ['error' => $e->getMessage()]);
-            return response()->json(['error' => 'Server error during S3 upload or database save.'], 500);
+            return response()->json(['error' => 'Server error during Azure upload or database save.'], 500);
         }
     }
-
 
     /**
      * Display the specified resource.
@@ -216,16 +199,13 @@ class ArticleController extends Controller
      */
     public function show(Request $request, Article $article)
     {
-        // Try to get authenticated user (works even for public routes with optional auth)
         $user = auth('sanctum')->user();
         $isAuthorized = $user && ($article->user_id === $user->id || $user->role === 'Admin');
 
         if ($article->status !== 'Published' && !$isAuthorized) {
-            // In production, returning 404 (Not Found) is often better to hide drafts.
             return response()->json(['error' => 'Article not published or unauthorized access.'], 403);
         }
         
-        // Eager load the author and approved comments
         $article->load(['user', 'comments' => function($query) {
             $query->where('status', 'Approved');
         }]);
@@ -244,13 +224,11 @@ class ArticleController extends Controller
      */
     public function update(Request $request, Article $article)
     {
-        // AUTHORIZATION CHECK: Only the article's author can modify it.
         if ($request->user()->id !== $article->user_id) {
-            return response()->json(['error' => 'You are not authorized to modify this article. Only the author can update it.'], 403);
+            return response()->json(['error' => 'Unauthorized.'], 403);
         }
 
         try {
-            // 1. Data Validation (image is nullable/optional)
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'paragraph' => 'required|string',
@@ -261,46 +239,46 @@ class ArticleController extends Controller
 
             $data = $request->except('image');
 
-            // Convert comma-separated tags string to array
-            if (isset($data['tags']) && !empty($data['tags'])) {
-                $data['tags'] = array_map('trim', explode(',', $data['tags']));
-            } elseif (isset($data['tags'])) {
-                $data['tags'] = null;
+            if (isset($data['tags'])) {
+                $data['tags'] = !empty($data['tags']) ? array_map('trim', explode(',', $data['tags'])) : null;
             }
 
-            // 2. Upload and Deletion Management
+            // --- MODIFICATION AZURE UPDATE ---
             if ($request->hasFile('image')) {
-                $disk = config('filesystems.default');
-                
-                // Delete old image if it exists
+                // 1. Supprimer l'ancienne image d'Azure si elle existe
                 if ($article->image) {
-                    $oldPath = str_replace(Storage::disk($disk)->url('/'), '', $article->image);
-                    Storage::disk($disk)->delete($oldPath);
+                    // Si l'ancienne image est une URL complète (legacy), on extrait le nom, sinon on prend tel quel
+                    $oldFilename = basename($article->image);
+                    if (Storage::disk('azure')->exists($oldFilename)) {
+                        Storage::disk('azure')->delete($oldFilename);
+                    }
                 }
 
-                // New Upload
+                // 2. Upload la nouvelle image
                 $imageFile = $request->file('image');
-                $path = 'images/articles';
-                $storagePath = Storage::disk($disk)->putFile($path, $imageFile, 'public');
-                $data['image'] = Storage::disk($disk)->url($storagePath);
+                $filename = time() . '_' . str_replace(' ', '_', $imageFile->getClientOriginalName());
                 
-                Log::info('Image updated', ['path' => $storagePath, 'disk' => $disk, 'user_id' => $request->user()->id]);
+                Storage::disk('azure')->putFileAs('', $imageFile, $filename, 'public');
+                
+                // Mettre à jour avec le nouveau nom de fichier
+                $data['image'] = $filename;
+                
+                Log::info('Image updated on Azure', ['filename' => $filename]);
             }
+            // ---------------------------------
             
-            // 3. Update the data
             $article->update($data);
 
             return response()->json([
                 'message' => 'Article successfully updated.',
                 'article' => $article,
-                'user_id' => $request->user()->id
             ]);
 
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::error('Article update failed', ['error' => $e->getMessage()]);
-            return response()->json(['error' => 'Server error during the update process.'], 500);
+            return response()->json(['error' => 'Server error.'], 500);
         }
     }
 
@@ -315,43 +293,33 @@ class ArticleController extends Controller
     public function destroy($id)
     {
         try {
-            // 1. Trouver l'article par son ID
             $article = Article::findOrFail($id);
             
-            // 2. Supprimer l'image associée de S3 (UC7) - CORRECTION APPLIQUÉE
+            // --- MODIFICATION AZURE DELETE ---
             if ($article->image) {
                 try {
-                    // Logique pour extraire le chemin S3 de l'URL publique, cohérente avec la méthode update.
-                    $oldPath = str_replace(Storage::disk('s3')->url('/'), '', $article->image);
+                    // On récupère juste le nom du fichier (au cas où ce serait une URL complète)
+                    $filename = basename($article->image);
                     
-                    if (Storage::disk('s3')->exists($oldPath)) {
-                        Storage::disk('s3')->delete($oldPath);
-                        Log::info('Article image deleted from S3', ['path' => $oldPath, 'article_id' => $article->id]);
+                    if (Storage::disk('azure')->exists($filename)) {
+                        Storage::disk('azure')->delete($filename);
+                        Log::info('Article image deleted from Azure', ['filename' => $filename]);
                     }
                 } catch (\Exception $e) {
-                    // Loguer si la suppression S3 échoue mais ne pas bloquer la suppression de l'article
-                    Log::error('Failed to delete S3 image for article', ['article_id' => $id, 'error' => $e->getMessage()]);
+                    Log::error('Failed to delete Azure image', ['error' => $e->getMessage()]);
                 }
             }
+            // ---------------------------------
 
-            // 3. Supprimer l'article de la base de données
             $article->delete();
 
-            // 4. Réponse de succès
             return response()->json(['message' => 'Article successfully deleted.'], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            // Article non trouvé
             return response()->json(['error' => 'Article not found.'], 404);
-            
         } catch (\Exception $e) {
-            // Loguer l'erreur pour le débogage
-            Log::error('ArticleController destroy failed:', [
-                'error' => $e->getMessage(),
-                'article_id' => $id,
-            ]);
-            // Renvoyer une erreur 500
-            return response()->json(['error' => 'Server error while deleting the article.'], 500);
+            Log::error('Article destroy failed:', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Server error.'], 500);
         }
     }
     
