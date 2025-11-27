@@ -16,33 +16,51 @@ class Article extends Model
 
     /**
      * Les attributs qui peuvent être assignés en masse.
-     * Ils correspondent aux colonnes de la table `articles`.
      */
     protected $fillable = [
-        'user_id', // Clé étrangère
+        'user_id', 
         'title',
         'paragraph', 
-        'image',       // URL S3 (UC7)
+        'image',       // Stockera seulement le nom du fichier (ex: "123_photo.jpg")
         'tags',
-        'status',      // 'Published' ou 'Archived'
+        'status',      
         'publish_date',
     ];
     
-    /**
-     * Convertit le champ 'tags' en tableau pour faciliter le travail en PHP.
-     * C'est utile si les tags sont stockés en JSON dans la BDD.
-     */
     protected $casts = [
         'tags' => 'array',
         'publish_date' => 'datetime',
     ];
 
     /**
+     * --- AJOUT POUR AZURE BLOB STORAGE ---
+     * Accessor magique pour l'attribut 'image'.
+     * Dès que vous appelez $article->image, cette fonction s'exécute.
+     */
+    public function getImageAttribute($value)
+    {
+        if ($value) {
+            // 1. Si c'est déjà une URL complète (ex: anciennes images ou lien externe), on la garde
+            if (str_starts_with($value, 'http')) {
+                return $value;
+            }
+
+            // 2. Sinon, on construit l'URL Azure complète
+            // Résultat : https://cloudblogstorage.../articles-images/mon_image.jpg
+            $azureUrl = config('filesystems.disks.azure.url');
+            
+            // Sécurité : on s'assure qu'il n'y a pas de double slash //
+            return rtrim($azureUrl, '/') . '/' . ltrim($value, '/');
+        }
+        
+        return null;
+    }
+
+    /**
      * Relation "plusieurs-à-un" : Un article appartient à un seul auteur (User).
      */
     public function user(): BelongsTo
     {
-        // Récupère l'auteur de l'article
         return $this->belongsTo(User::class);
     }
 
@@ -51,7 +69,6 @@ class Article extends Model
      */
     public function comments(): HasMany
     {
-        // Récupère tous les commentaires d'un article
         return $this->hasMany(Comment::class);
     }
 }
