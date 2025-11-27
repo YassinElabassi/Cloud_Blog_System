@@ -311,45 +311,37 @@ const ArticlesPage = () => {
   // ----------------------------------------------------
 
   const fetchArticles = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Using fetchWithAuth for the Admin route to get ALL articles
-      const data: Blog[] = await fetchWithAuth("admin/articles");
-      // Ensure tags are always arrays
-      const normalizedData = data.map((blog) => {
-        let tags = [];
-        if (Array.isArray(blog.tags)) {
-          tags = blog.tags;
-        } else if (typeof blog.tags === "string") {
-          if (blog.tags.trim()) {
-            try {
-              // Try parsing as JSON first
-              tags = JSON.parse(blog.tags);
-            } catch {
-              // If JSON parse fails, treat as comma-separated string
-              tags = blog.tags
-                .split(",")
-                .map((tag) => tag.trim())
-                .filter((tag) => tag);
-            }
-          }
-        }
-        return { ...blog, tags };
-      });
-      setBlogs(normalizedData);
-    } catch (err: any) {
-      console.error("Error loading articles:", err);
-      // Improved error handling
-      setError(
-        err.message === "No auth token found"
-          ? "Failed to load articles. Authentication token missing."
-          : `Error: ${err.message}`,
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  setLoading(true);
+  setError(null);
+
+  try {
+    const data: Blog[] = await fetchWithAuth("admin/articles");
+
+    const normalizedData = data.map((blog) => {
+      let tags: string[] = [];
+
+      if (Array.isArray(blog.tags)) {
+        tags = blog.tags;
+      } else {
+        // Si tags n’est pas un array, on met un array vide
+        tags = [];
+      }
+
+      return { ...blog, tags };
+    });
+
+    setBlogs(normalizedData);
+  } catch (err: any) {
+    console.error("Error loading articles:", err);
+    setError(
+      err.message === "No auth token found"
+        ? "Failed to load articles. Authentication token missing."
+        : `Error: ${err.message}`
+    );
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   // ----------------------------------------------------
   // 2. API Action Handlers

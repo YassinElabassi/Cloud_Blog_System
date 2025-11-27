@@ -135,8 +135,9 @@ const BlogDetailsPage = () => {
               Article Not Found
             </h2>
             <p className="text-body-color dark:text-body-color-dark mb-8">
-              The article you're looking for doesn't exist.
+              The article you&apos;re looking for doesn&apos;t exist.
             </p>
+
             <Link
               href="/blog-public"
               className="bg-primary hover:bg-primary/90 inline-block rounded-md px-8 py-3 text-base font-semibold text-white transition duration-300"

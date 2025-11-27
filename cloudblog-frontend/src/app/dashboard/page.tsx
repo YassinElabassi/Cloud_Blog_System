@@ -60,28 +60,27 @@ const DashboardPage = () => {
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
-      router.push("/signin"); // redirige si pas connecté
-      return;
-    }
+  const token = localStorage.getItem("auth_token");
+  if (!token) {
+    router.push("/signin"); // redirige si pas connecté
+    return;
+  }
 
-    // 2. MODIFIER LE FETCH POUR RÉCUPÉRER L'UTILISATEUR ET LES STATS EN PARALLÈLE
-    Promise.all([fetchWithAuth("user"), fetchWithAuth("articles/stats")])
-      .then(([userData, statsData]) => {
-        setUser(userData);
-        setStats(statsData);
-      })
-      .catch((error) => {
-        console.error("Auth or data fetch error:", error);
-        // Use the same storage key as AuthContext and api.ts
-        localStorage.removeItem("auth_token");
-        router.push("/signin");
-      })
-      .finally(() => {
-        setLoading(false); // Mettre fin au chargement une fois que tout est récupéré
-      });
-  }, []);
+  // 2. MODIFIER LE FETCH POUR RÉCUPÉRER L'UTILISATEUR ET LES STATS EN PARALLÈLE
+  Promise.all([fetchWithAuth("user"), fetchWithAuth("articles/stats")])
+    .then(([userData, statsData]) => {
+      setUser(userData);
+      setStats(statsData);
+    })
+    .catch((error) => {
+      console.error("Auth or data fetch error:", error);
+      localStorage.removeItem("auth_token");
+      router.push("/signin");
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+}, [router, fetchWithAuth, setUser, setStats, setLoading]);
 
   // --- CDN PURGE FUNCTION (SIMULATION) ---
   const handlePurgeCDN = async () => {

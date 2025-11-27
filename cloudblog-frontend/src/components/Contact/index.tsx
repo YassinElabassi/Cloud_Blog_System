@@ -71,9 +71,10 @@ const Contact = () => {
                 Contact Us
               </h2>
               <p className="text-body-color mb-12 text-base font-medium">
-                Have questions or feedback? Fill out the form below and we'll
+                Have questions or feedback? Fill out the form below and we&apos;ll
                 get back to you as soon as possible.
               </p>
+
               <form onSubmit={handleSubmit}>
                 <div className="-mx-4 flex flex-wrap">
                   <div className="w-full px-4 md:w-1/2">
