@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useCallback } from "react";
+import Image from "next/image";
 import {
   Calendar,
   Archive,
@@ -104,10 +105,13 @@ const BlogModal = ({ blog, onClose }: BlogModalProps) => {
               </button>
 
               {/* Blog Content */}
-              <img
+              <Image
                 src={blog.image}
                 alt={blog.title}
-                className="mb-4 h-60 w-full rounded-xl object-cover"
+                width={600}
+                height={300}
+                className="mb-4 rounded-xl object-cover"
+                priority={true}
               />
               <h2 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
                 {blog.title}
@@ -116,10 +120,12 @@ const BlogModal = ({ blog, onClose }: BlogModalProps) => {
                 {blog.paragraph}
               </p>
               <div className="mb-4 flex items-center gap-2">
-                <img
+                <Image
                   src={blog.author.image}
                   alt={blog.author.name}
-                  className="h-10 w-10 rounded-full object-cover"
+                  width={40}
+                  height={40}
+                  className="rounded-full object-cover"
                 />
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   <p className="font-medium text-gray-900 dark:text-white">
@@ -197,10 +203,12 @@ const BlogCard = ({
       {/* Clickable Area for View Modal */}
       <div onClick={() => onView(blog)} className="cursor-pointer">
         {/* Blog Image */}
-        <img
+        <Image
           src={blog.image}
           alt={blog.title}
-          className="mb-4 h-40 w-full rounded-xl object-cover"
+          width={400}
+          height={200}
+          className="mb-4 rounded-xl object-cover"
         />
 
         {/* Blog Info */}
@@ -311,37 +319,60 @@ const ArticlesPage = () => {
   // ----------------------------------------------------
 
   const fetchArticles = useCallback(async () => {
-  setLoading(true);
-  setError(null);
+    setLoading(true);
+    setError(null);
+    try {
+      // Using fetchWithAuth for the Admin route to get ALL articles
+      const data: Blog[] = await fetchWithAuth("admin/articles");
+      // Ensure tags are always arrays
+      const normalizedData = data.map((blog) => {
+        // Normalize tags safely (remplace l'ancien bloc qui utilisait blog.tags.trim())
+        let tags: string[] = [];
 
-  try {
-    const data: Blog[] = await fetchWithAuth("admin/articles");
+        const parseTags = (raw: unknown): string[] => {
+          if (Array.isArray(raw)) {
+            return raw.map((t) => String(t).trim()).filter(Boolean);
+          }
 
-    const normalizedData = data.map((blog) => {
-      let tags: string[] = [];
+          if (typeof raw === "string") {
+            const s = raw.trim();
+            if (!s) return [];
+            try {
+              const parsed = JSON.parse(s);
+              if (Array.isArray(parsed))
+                return parsed.map((t) => String(t).trim()).filter(Boolean);
+              if (typeof parsed === "string")
+                return parsed.split(",").map((t) => t.trim()).filter(Boolean);
+            } catch {
+              // not JSON -> fallthrough to comma-split
+            }
+            return s.split(",").map((t) => t.trim()).filter(Boolean);
+          }
 
-      if (Array.isArray(blog.tags)) {
-        tags = blog.tags;
-      } else {
-        // Si tags n’est pas un array, on met un array vide
-        tags = [];
-      }
+          if (raw == null) return [];
 
-      return { ...blog, tags };
-    });
+          // Fallback: coerce to string and split
+          return String(raw).split(",").map((t) => t.trim()).filter(Boolean);
+        };
 
-    setBlogs(normalizedData);
-  } catch (err: any) {
-    console.error("Error loading articles:", err);
-    setError(
-      err.message === "No auth token found"
-        ? "Failed to load articles. Authentication token missing."
-        : `Error: ${err.message}`
-    );
-  } finally {
-    setLoading(false);
-  }
-}, []);
+        // use (blog as any).tags to avoid TS 'never' when blog type is narrow
+        tags = parseTags((blog as any).tags);
+
+        return { ...blog, tags };
+      });
+      setBlogs(normalizedData);
+    } catch (err: any) {
+      console.error("Error loading articles:", err);
+      // Improved error handling
+      setError(
+        err.message === "No auth token found"
+          ? "Failed to load articles. Authentication token missing."
+          : `Error: ${err.message}`,
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // ----------------------------------------------------
   // 2. API Action Handlers

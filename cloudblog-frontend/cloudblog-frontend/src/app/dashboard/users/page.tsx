@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { Search, Filter, Trash2, ToggleRight, Eye, Users, UserCheck, UserX, ChevronLeft, ChevronRight, X, Edit, PlusCircle, Save } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+import Image from 'next/image';
 
 import { fetchWithAuth } from "@/lib/api";
 
@@ -61,10 +62,12 @@ const UserAvatar = ({ user, size = 'small' }: { user: User, size?: 'small' | 'la
     const avatarSizeClass = size === 'large' ? 'w-12 h-12 text-xl' : 'w-10 h-10 text-lg';
     return (
         <div className={`flex-shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold mr-4 ${avatarSizeClass}`}>
-            {user.image ? <img 
+            {user.image ? <Image 
                 src={user.image} 
-                alt={user.name} 
-                className="w-full h-full object-cover rounded-full" 
+                alt={user.name}
+                width={40}
+                height={40}
+                className="rounded-full"
                 onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { 
                     e.currentTarget.onerror = null; 
                     e.currentTarget.src = 'https://placehold.co/100x100/A855F7/ffffff?text=U'; 

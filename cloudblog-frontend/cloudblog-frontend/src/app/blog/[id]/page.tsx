@@ -134,9 +134,6 @@ const BlogDetailsPage = () => {
             <h2 className="text-dark mb-4 text-3xl font-bold dark:text-white">
               Article Not Found
             </h2>
-            <p className="text-body-color dark:text-body-color-dark mb-8">
-              The article you&apos;re looking for doesn&apos;t exist.
-            </p>
 
             <Link
               href="/blog-public"

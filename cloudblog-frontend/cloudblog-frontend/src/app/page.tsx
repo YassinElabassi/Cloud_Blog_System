@@ -2,7 +2,6 @@
 
 import Blog from "@/components/Blog";
 import ScrollUp from "@/components/Common/ScrollUp";
-import Contact from "@/components/Contact";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -27,7 +26,6 @@ export default function Home() {
     <>
       <ScrollUp />
       <Blog />
-      <Contact />
     </>
   );
 }

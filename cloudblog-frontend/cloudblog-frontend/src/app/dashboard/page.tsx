@@ -1,13 +1,13 @@
 // src/app/dashboard/page.tsx
 
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { fetchWithAuth } from "@/lib/api";
-import Link from "next/link";
-import React from "react";
-import { motion, AnimatePresence, Variants } from "framer-motion";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { fetchWithAuth } from '@/lib/api';
+import Link from 'next/link';
+import React from 'react';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 
 // --- ANIMATION VARIANTS ---
 
@@ -25,7 +25,7 @@ const pageAnimation: Variants = {
     transition: {
       duration: 0.8,
       ease: [0.25, 1, 0.5, 1],
-      when: "beforeChildren",
+      when: 'beforeChildren',
       staggerChildren: 0.05,
     },
   },
@@ -39,7 +39,7 @@ const itemVariants: Variants = {
     y: 0,
     scale: 1,
     transition: {
-      type: "spring",
+      type: 'spring',
       stiffness: 150,
       damping: 18,
     },
@@ -47,7 +47,7 @@ const itemVariants: Variants = {
   hover: {
     scale: 1.02,
     y: -3,
-    boxShadow: "0 10px 20px rgba(0, 0, 0, 0.1)",
+    boxShadow: '0 10px 20px rgba(0, 0, 0, 0.1)',
     transition: { duration: 0.3 },
   },
 };
@@ -56,56 +56,50 @@ const DashboardPage = () => {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  // 1. AJOUTER UN ÉTAT POUR LES STATISTIQUES
   const [stats, setStats] = useState<any>(null);
 
+  // ✅ UN SEUL useEffect pour l'authentification et le chargement des données
   useEffect(() => {
-  const token = localStorage.getItem("auth_token");
-  if (!token) {
-    router.push("/signin"); // redirige si pas connecté
-    return;
-  }
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/signin');
+      return;
+    }
 
-  // 2. MODIFIER LE FETCH POUR RÉCUPÉRER L'UTILISATEUR ET LES STATS EN PARALLÈLE
-  Promise.all([fetchWithAuth("user"), fetchWithAuth("articles/stats")])
-    .then(([userData, statsData]) => {
-      setUser(userData);
-      setStats(statsData);
-    })
-    .catch((error) => {
-      console.error("Auth or data fetch error:", error);
-      localStorage.removeItem("auth_token");
-      router.push("/signin");
-    })
-    .finally(() => {
-      setLoading(false);
-    });
-}, [router, fetchWithAuth, setUser, setStats, setLoading]);
+    Promise.all([fetchWithAuth('user'), fetchWithAuth('articles/stats')])
+      .then(([userData, statsData]) => {
+        setUser(userData);
+        setStats(statsData);
+      })
+      .catch((error) => {
+        console.error('Auth or data fetch error:', error);
+        localStorage.removeItem('auth_token');
+        router.push('/signin');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [router]);
 
-  // --- CDN PURGE FUNCTION (SIMULATION) ---
+  // --- CDN PURGE FUNCTION ---
   const handlePurgeCDN = async () => {
-    alert("CDN Cache purge in progress... This may take a few minutes.");
+    alert('CDN Cache purge in progress... This may take a few minutes.');
 
     try {
-      const response = await fetch("/api/purge-cdn", { method: "POST" });
-
-      // Pas besoin de simuler un délai ici, l'API le fait déjà
+      const response = await fetch('/api/purge-cdn', { method: 'POST' });
 
       if (response.ok) {
         const data = await response.json();
-        // Utilise l'ID réel retourné par l'API simulée
         alert(
-          `✅ Purge Success! Invalidation ID ${data.invalidationId} has been initiated. Status: ${data.status}`,
+          `✅ Purge Success! Invalidation ID ${data.invalidationId} has been initiated. Status: ${data.status}`
         );
       } else {
-        // Backend error handling
         const data = await response.json();
-        alert(`⚠️ Purge Failed. Error: ${data.error || "Unknown error."}`);
+        alert(`⚠️ Purge Failed. Error: ${data.error || 'Unknown error.'}`);
       }
     } catch (error) {
-      // Network connection error
-      alert(`❌ Failed to connect to the purge API.`);
-      console.error("CDN Purge Error:", error);
+      alert('❌ Failed to connect to the purge API.');
+      console.error('CDN Purge Error:', error);
     }
   };
 
@@ -272,118 +266,118 @@ const DashboardPage = () => {
   const kpis = stats
     ? [
         {
-          title: "Total Users",
+          title: 'Total Users',
           value: stats.userStats.total,
           description: `${stats.userStats.active} active users`,
-          link: "/dashboard/users",
+          link: '/dashboard/users',
           icon: SVGIcons.users,
-          color: "text-blue-500",
+          color: 'text-blue-500',
         },
         {
-          title: "Total Articles",
+          title: 'Total Articles',
           value: stats.articleStats.total,
           description: `${stats.articleStats.published} published articles`,
-          link: "/dashboard/articles",
+          link: '/dashboard/articles',
           icon: SVGIcons.file,
-          color: "text-green-500",
+          color: 'text-green-500',
         },
         {
-          title: "Total Comments",
+          title: 'Total Comments',
           value: stats.commentStats.total,
           description: `${stats.commentStats.pending} pending comments`,
-          link: "/dashboard/comments",
+          link: '/dashboard/comments',
           icon: SVGIcons.messageCircle,
-          color: "text-yellow-500",
+          color: 'text-yellow-500',
         },
       ]
     : [];
 
   const managementLinks = [
     {
-      title: "Articles for Moderation",
-      description: "Check and archive inappropriate content",
-      link: "/dashboard/articles",
+      title: 'Articles for Moderation',
+      description: 'Check and archive inappropriate content',
+      link: '/dashboard/articles',
       icon: SVGIcons.flag,
-      label: "Moderate Articles",
+      label: 'Moderate Articles',
     },
     {
-      title: "Reported Comments",
-      description: "Delete offensive or off-topic comments",
-      link: "/dashboard/comments",
+      title: 'Reported Comments',
+      description: 'Delete offensive or off-topic comments',
+      link: '/dashboard/comments',
       icon: SVGIcons.flag,
-      label: "Moderate Comments",
+      label: 'Moderate Comments',
     },
     {
-      title: "Metrics & Monitoring",
-      description: "View logs and APM via AWS CloudWatch",
-      link: "/dashboard/metrics",
+      title: 'Metrics & Monitoring',
+      description: 'View logs and APM via AWS CloudWatch',
+      link: '/dashboard/metrics',
       icon: SVGIcons.activity,
-      label: "Consult CloudWatch",
+      label: 'Consult CloudWatch',
     },
     {
-      title: "Secrets Management",
-      description: "Configure API keys via AWS Secrets Manager",
-      link: "/dashboard/secrets",
+      title: 'Secrets Management',
+      description: 'Configure API keys via AWS Secrets Manager',
+      link: '/dashboard/secrets',
       icon: SVGIcons.lock,
-      label: "Manage Secrets Manager",
+      label: 'Manage Secrets Manager',
     },
     {
-      title: "S3 Storage & CDN",
-      description: "Manage static files (S3) and cache",
-      link: "/dashboard/storage",
+      title: 'S3 Storage & CDN',
+      description: 'Manage static files (S3) and cache',
+      link: '/dashboard/storage',
       icon: SVGIcons.cloud,
-      label: "Access Storage",
+      label: 'Access Storage',
     },
   ];
 
   // Quick Actions - Updated for Blue CDN button and Orange Manage Articles
   const quickActions = [
     {
-      title: "Purge CDN Cache",
-      link: "/dashboard/cdn-purge",
+      title: 'Purge CDN Cache',
+      link: '/dashboard/cdn-purge',
       icon: SVGIcons.refresh,
-      color: "bg-blue-600",
+      color: 'bg-blue-600',
     },
     {
-      title: "Add New User",
-      link: "/dashboard/users",
+      title: 'Add New User',
+      link: '/dashboard/users',
       icon: SVGIcons.users,
-      color: "bg-green-600",
+      color: 'bg-green-600',
     },
     {
-      title: "Manage Articles",
-      link: "/dashboard/articles",
+      title: 'Manage Articles',
+      link: '/dashboard/articles',
       icon: SVGIcons.activity,
-      color: "bg-orange-500",
+      color: 'bg-orange-500',
     }, // Simple change, linked to articles management
   ];
 
   const recentActivity = [
     {
-      type: "article",
-      text: "New article published: Serverless Patterns",
-      time: "1 min ago",
+      type: 'article',
+      text: 'New article published: Serverless Patterns',
+      time: '1 min ago',
       icon: SVGIcons.file,
     },
     {
-      type: "comment",
-      text: "3 comments flagged by AI",
-      time: "15 min ago",
+      type: 'comment',
+      text: '3 comments flagged by AI',
+      time: '15 min ago',
       icon: SVGIcons.flag,
     },
     {
-      type: "user",
-      text: "New user registered (ID: 404)",
-      time: "1 hour ago",
+      type: 'user',
+      text: 'New user registered (ID: 404)',
+      time: '1 hour ago',
       icon: SVGIcons.users,
     },
   ];
   const systemStatus = {
-    status: "Online",
-    uptime: "99.98%",
-    requests: "128/s",
-    color: "text-green-500",
-    ringColor: "ring-green-500",
+    status: 'Online',
+    uptime: '99.98%',
+    requests: '128/s',
+    color: 'text-green-500',
+    ringColor: 'ring-green-500',
   };
 
   // --- COMPONENTS ---
@@ -491,7 +485,7 @@ const DashboardPage = () => {
   // Quick Action Button - Handles CDN Purge action and other links
   const QuickActionButton = ({ title, link, icon, color }) => (
     <motion.div variants={itemVariants} whileHover="hover" className="h-full">
-      {title === "Purge CDN Cache" ? (
+      {title === 'Purge CDN Cache' ? (
         // Button for CDN action (Blue color)
         <motion.button
           onClick={handlePurgeCDN}
@@ -530,6 +524,11 @@ const DashboardPage = () => {
       </div>
     </div>
   );
+
+  useEffect(() => {
+    // votre logique
+    console.log('Dashboard loaded');
+  }, [router]); // ✅ router ajouté
 
   if (loading) {
     return (

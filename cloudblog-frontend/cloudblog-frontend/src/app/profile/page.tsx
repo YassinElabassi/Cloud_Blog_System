@@ -32,12 +32,14 @@ const ProfilePage = () => {
     }
 
     if (user) {
-      setFormData({
+      const initialValues = {
         name: user.name || "",
         email: user.email || "",
-        designation: user.designation || "",
-        image: user.image || "",
-      });
+        designation: (user as any).designation || "",
+        image: (user as any).image || "",
+      };
+
+      setFormData(initialValues);
     }
   }, [user, authLoading, router]);
 
